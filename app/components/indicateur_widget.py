@@ -206,7 +206,6 @@ def render_indicateur(
                 val = st.select_slider(
                     label=typo_libelle,
                     options=OPTIONS,
-                    value=st.session_state[key_typo],
                     format_func=_format_option,
                     key=key_typo,
                     label_visibility="collapsed",
@@ -244,7 +243,6 @@ def render_indicateur(
     val = st.select_slider(
         label="Palier",
         options=OPTIONS,
-        value=st.session_state[key_val],
         format_func=_format_option,
         key=key_val,
         label_visibility="collapsed",
@@ -257,13 +255,28 @@ def render_indicateur(
         if desc:
             st.caption(desc)
 
-    # Commentaire optionnel
+    # Commentaire optionnel — sauvegarde automatique dès modification
+    def _on_change_cmt(
+        _session_id=session_id,
+        _ind_id=ind_id,
+        _key=key_val,
+        _key_cmt=key_cmt,
+    ):
+        v = st.session_state.get(_key)
+        c = st.session_state[_key_cmt]
+        if v is not None:
+            try:
+                _save_reponse(_session_id, _ind_id, v, c)
+                st.toast("Commentaire enregistré", icon="✅")
+            except Exception as exc:
+                st.error(f"Erreur lors de la sauvegarde : {exc}")
+
     commentaire_retour = st.text_area(
         "Commentaire (optionnel)",
-        value=st.session_state[key_cmt],
         key=key_cmt,
         label_visibility="visible",
         height=60,
+        on_change=_on_change_cmt,
     )
 
     return val, commentaire_retour

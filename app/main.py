@@ -7,6 +7,14 @@ Navigation via la sidebar :
   - Administration
 """
 
+# Garantir que la racine du projet est dans sys.path, quel que soit le répertoire
+# depuis lequel Streamlit est lancé (streamlit run app/main.py).
+import sys
+import os
+_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if _root not in sys.path:
+    sys.path.insert(0, _root)
+
 import streamlit as st
 from app.config import APP_NAME, APP_VERSION, APP_ICON
 from app.db.connection import test_connection

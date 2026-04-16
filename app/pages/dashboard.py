@@ -16,6 +16,7 @@ from app.db.connection import get_cursor
 from app.utils.scoring import (
     scores_par_domaine,
     scores_par_rubrique,
+    scores_par_domaine_batch,
     score_global,
     build_score_df,
 )
@@ -315,11 +316,14 @@ def _tab_groupe() -> None:
         st.error(f"Erreur : {exc}")
         return
 
-    # Construire la table de scores
+    # Construire la table de scores (batch : évite le N+1)
+    session_ids      = [s["id"] for s in sessions]
+    all_dom_scores   = scores_par_domaine_batch(session_ids, campagne["id"])
+
     rows = []
     for sess in sessions:
-        row = {"Établissement": sess["etab_nom"]}
-        dom_scores = scores_par_domaine(sess["id"], campagne["id"])
+        row       = {"Établissement": sess["etab_nom"]}
+        dom_scores = all_dom_scores.get(sess["id"], [])
         score_map  = {s["domaine_code"]: s["score"] for s in dom_scores}
         values     = [s["score"] for s in dom_scores if s["score"] is not None]
         row["Global"] = round(sum(values) / len(values), 2) if values else None
@@ -337,7 +341,7 @@ def _tab_groupe() -> None:
     def fmt_score(v):
         return f"{v:.2f}" if v is not None else "—"
 
-    df_display = df.applymap(fmt_score)
+    df_display = df.map(fmt_score)
     st.dataframe(df_display, use_container_width=True)
 
     # Export CSV

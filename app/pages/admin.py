@@ -488,7 +488,6 @@ def _tab_indicateurs_groupe() -> None:
                 val = st.select_slider(
                     label="Palier",
                     options=OPTIONS_GROUPE,
-                    value=st.session_state[key_val],
                     format_func=lambda x: "— Non renseigné" if x is None else str(x),
                     key=key_val,
                     label_visibility="collapsed",
@@ -498,12 +497,37 @@ def _tab_indicateurs_groupe() -> None:
                 if val is not None and val in paliers:
                     st.caption(paliers[val])
 
+            def _on_change_cmt_groupe(
+                _camp_id=campagne_id,
+                _ind_id=ind_id,
+                _key=key_val,
+                _key_cmt=key_cmt,
+            ):
+                v = st.session_state.get(_key)
+                c = st.session_state[_key_cmt]
+                if v is None:
+                    return
+                try:
+                    with get_cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO reponses_groupe
+                                (id_campagne, id_indicateur, valeur, commentaire, date_saisie)
+                            VALUES (%s, %s, %s, %s, NOW())
+                            ON DUPLICATE KEY UPDATE
+                                valeur = VALUES(valeur),
+                                commentaire = VALUES(commentaire),
+                                date_saisie = NOW()
+                        """, (_camp_id, _ind_id, int(v), c))
+                    st.toast("Commentaire groupe enregistré", icon="✅")
+                except Exception as exc:
+                    st.error(f"Erreur : {exc}")
+
             st.text_area(
                 "Commentaire (optionnel)",
-                value=st.session_state[key_cmt],
                 key=key_cmt,
                 height=50,
                 label_visibility="visible",
+                on_change=_on_change_cmt_groupe,
             )
 
 

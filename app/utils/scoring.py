@@ -210,6 +210,100 @@ def scores_par_rubrique(session_id: int, campagne_id: int) -> list[dict]:
     return result
 
 
+def scores_par_domaine_batch(session_ids: list[int], campagne_id: int) -> dict[int, list[dict]]:
+    """
+    Calcule les scores par domaine pour une liste de sessions en un minimum de requêtes.
+
+    Au lieu de N × 5 requêtes SQL (pattern N+1), effectue :
+    - 1 requête pour les indicateurs (référentiel commun)
+    - 1 requête pour les typologies (référentiel commun)
+    - 1 requête pour les réponses groupe (commune à la campagne)
+    - 1 requête pour toutes les réponses standard (WHERE id_session IN (...))
+    - 1 requête pour toutes les réponses par typologie (idem)
+
+    Retourne {session_id: [liste de dicts domaine]} avec le même format que scores_par_domaine().
+    """
+    if not session_ids:
+        return {}
+
+    df_ind = _load_indicators()
+    if df_ind.empty:
+        return {sid: [] for sid in session_ids}
+
+    reponses_groupe = _load_reponses_groupe(campagne_id)
+    nb_typologies   = _count_typologies()
+
+    placeholders = ",".join(["%s"] * len(session_ids))
+
+    # Toutes les réponses standard pour ces sessions
+    with get_cursor() as cur:
+        cur.execute(
+            f"SELECT id_session, id_indicateur, valeur FROM reponses WHERE id_session IN ({placeholders})",
+            session_ids,
+        )
+        all_reponses: dict[int, dict[int, int]] = {}
+        for r in cur.fetchall():
+            all_reponses.setdefault(r["id_session"], {})[r["id_indicateur"]] = r["valeur"]
+
+    # Toutes les réponses par typologie pour ces sessions
+    with get_cursor() as cur:
+        cur.execute(
+            f"SELECT id_session, id_indicateur, valeur FROM reponses_typologies WHERE id_session IN ({placeholders})",
+            session_ids,
+        )
+        all_typo: dict[int, dict[int, list[int]]] = {}
+        for r in cur.fetchall():
+            all_typo.setdefault(r["id_session"], {}).setdefault(r["id_indicateur"], []).append(r["valeur"])
+
+    result: dict[int, list[dict]] = {}
+    for sid in session_ids:
+        reponses      = all_reponses.get(sid, {})
+        reponses_typo = all_typo.get(sid, {})
+
+        df = df_ind.copy()
+
+        def _eff(row, _r=reponses, _rt=reponses_typo, _rg=reponses_groupe, _nb=nb_typologies):
+            ind_id = row["ind_id"]
+            if row["porteur"] == "GROUPE":
+                v = _rg.get(ind_id)
+                return float(v) if v is not None else None
+            if row["has_typologies"]:
+                typo_vals = _rt.get(ind_id, [])
+                nb = _nb.get(ind_id, 0)
+                if nb > 0 and len(typo_vals) == nb:
+                    return float(sum(typo_vals) / nb)
+                return None
+            v = _r.get(ind_id)
+            return float(v) if v is not None else None
+
+        df["valeur_effective"] = df.apply(_eff, axis=1)
+
+        dom_scores = []
+        for (did, dcode, dlibelle), grp in df.groupby(
+            ["domaine_id", "domaine_code", "domaine_libelle"]
+        ):
+            answered = grp["valeur_effective"].dropna()
+            dom_scores.append({
+                "domaine_id":      int(did),
+                "domaine_code":    dcode,
+                "domaine_libelle": dlibelle,
+                "score":           round(float(answered.mean()), 2) if not answered.empty else None,
+                "answered":        int(answered.count()),
+                "total":           int(len(grp)),
+            })
+
+        ordre = (
+            df[["domaine_id", "domaine_ordre"]]
+            .drop_duplicates()
+            .set_index("domaine_id")["domaine_ordre"]
+            .to_dict()
+        )
+        dom_scores.sort(key=lambda x: ordre.get(x["domaine_id"], 0))
+        result[sid] = dom_scores
+
+    return result
+
+
 def progress_session(session_id: int, campagne_id: int) -> dict:
     """
     Retourne le taux d'avancement de la session :

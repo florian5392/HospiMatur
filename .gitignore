@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.pytest_cache/
+
+# Environnement virtuel
+.venv/
+venv/
+env/
+
+# Variables d'environnement (ne jamais commiter)
+.env
+
+# Streamlit cache
+.streamlit/secrets.toml
+
+# MySQL data (volume Docker)
+mysql_data/
+
+# Éditeurs / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
