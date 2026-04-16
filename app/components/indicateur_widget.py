@@ -6,6 +6,9 @@ Modes :
 - groupe    : lecture seule, valeur pré-remplie par l'admin
 - lecture   : lecture seule générique (dashboard)
 """
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+# pylint: disable=too-many-locals,too-many-branches,too-many-statements
+# pylint: disable=broad-exception-caught
 
 from __future__ import annotations
 import streamlit as st
@@ -123,11 +126,20 @@ def render_indicateur(
     with col1:
         st.markdown(f"**{code}** — {titre}")
     with col2:
-        badges = f'<span style="background:{color};color:white;padding:2px 6px;border-radius:4px;font-size:0.75em">{typ}</span>'
+        _s = "padding:2px 6px;border-radius:4px;font-size:0.75em;color:white"
+        badges = (
+            f'<span style="background:{color};{_s}">{typ}</span>'
+        )
         if porteur == "GROUPE":
-            badges += ' <span style="background:#e67e22;color:white;padding:2px 6px;border-radius:4px;font-size:0.75em">GROUPE</span>'
+            badges += (
+                f' <span style="background:#e67e22;{_s}">GROUPE</span>'
+            )
         if inverse:
-            badges += ' <span style="background:#c0392b;color:white;padding:2px 6px;border-radius:4px;font-size:0.75em" title="Palier élevé = situation plus risquée">INVERSÉ ⚠</span>'
+            badges += (
+                f' <span style="background:#c0392b;{_s}"'
+                ' title="Palier élevé = situation plus risquée">'
+                "INVERSÉ ⚠</span>"
+            )
         st.markdown(badges, unsafe_allow_html=True)
 
     # ── Définition / périmètre (expander) ─────────────────────
@@ -142,7 +154,10 @@ def render_indicateur(
 
     # Avertissement indicateur inversé
     if inverse and mode == "edition":
-        st.caption("⚠️ Indicateur inversé : un palier élevé correspond à une situation plus risquée.")
+        st.caption(
+            "⚠️ Indicateur inversé : "
+            "un palier élevé correspond à une situation plus risquée."
+        )
 
     # ── Affichage selon le mode ───────────────────────────────
     valeur_retour     = reponse_courante
@@ -170,8 +185,7 @@ def render_indicateur(
     if has_typo:
         # Indicateur par typologie (COUV-22D, COUV-22F)
         for typo in typologies:
-            typo_id    = typo["id"]
-            typo_code  = typo["code_typo"]
+            typo_id      = typo["id"]
             typo_libelle = typo["libelle_typo"]
             key_typo   = f"ind_{ind_id}_typo_{typo_id}"
             key_cmt    = f"cmt_{ind_id}_typo_{typo_id}"

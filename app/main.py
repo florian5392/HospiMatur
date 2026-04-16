@@ -15,6 +15,7 @@ _root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _root not in sys.path:
     sys.path.insert(0, _root)
 
+# pylint: disable=wrong-import-position
 import streamlit as st
 from app.config import APP_NAME, APP_VERSION, APP_ICON
 from app.db.connection import test_connection

@@ -8,6 +8,9 @@ Workflow :
   T12 — Sauvegarde automatique à chaque saisie
   T13 — Soumission finale
 """
+# pylint: disable=too-many-locals,too-many-branches,too-many-statements
+# pylint: disable=too-many-arguments,too-many-positional-arguments
+# pylint: disable=broad-exception-caught
 
 from __future__ import annotations
 import streamlit as st
@@ -16,6 +19,7 @@ from app.db.connection import get_cursor
 
 from app.components.progress_bar import render_progress_bar, domain_badge, domain_status
 from app.components.indicateur_widget import render_indicateur
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Chargement des données référentiel
@@ -30,8 +34,10 @@ def _load_referentiel() -> dict:
     with get_cursor() as cur:
         cur.execute("""
             SELECT
-                d.id AS domaine_id, d.code AS domaine_code, d.libelle AS domaine_libelle, d.ordre AS domaine_ordre,
-                r.id AS rubrique_id, r.code AS rubrique_code, r.libelle AS rubrique_libelle, r.ordre AS rubrique_ordre,
+                d.id AS domaine_id, d.code AS domaine_code,
+                d.libelle AS domaine_libelle, d.ordre AS domaine_ordre,
+                r.id AS rubrique_id, r.code AS rubrique_code,
+                r.libelle AS rubrique_libelle, r.ordre AS rubrique_ordre,
                 pc.id AS pc_id, pc.numero AS pc_numero, pc.libelle AS pc_libelle, pc.ordre AS pc_ordre,
                 i.id, i.code, i.lettre, i.titre, i.definition, i.perimetre, i.objectif,
                 i.type, i.porteur, i.inverse, i.has_typologies, i.mode_saisie
@@ -43,7 +49,10 @@ def _load_referentiel() -> dict:
         """)
         indicators = cur.fetchall()
 
-        cur.execute("SELECT id_indicateur, valeur, description FROM paliers ORDER BY id_indicateur, valeur")
+        cur.execute(
+            "SELECT id_indicateur, valeur, description "
+            "FROM paliers ORDER BY id_indicateur, valeur"
+        )
         paliers: dict[int, dict[int, str]] = {}
         for p in cur.fetchall():
             paliers.setdefault(p["id_indicateur"], {})[p["valeur"]] = p["description"]
@@ -197,7 +206,7 @@ def _show_identification() -> None:
 
 def _init_session_state_from_db(session_id: int, campagne_id: int, referentiel: dict) -> None:
     """Initialise les clés session_state depuis les réponses en base (appelé une seule fois)."""
-    std, typo, groupe = _load_session_reponses(session_id, campagne_id)
+    std, typo, _ = _load_session_reponses(session_id, campagne_id)
 
     for ind in referentiel["indicators"]:
         ind_id  = ind["id"]
@@ -227,7 +236,7 @@ def _init_session_state_from_db(session_id: int, campagne_id: int, referentiel: 
                 st.session_state[key_cmt] = resp.get("commentaire", "") or "" if resp else ""
 
 
-def _get_answered_etab(session_id: int, referentiel: dict) -> set[int]:
+def _get_answered_etab(_session_id: int, referentiel: dict) -> set[int]:
     """Retourne les id_indicateur ETABLISSEMENT ayant une réponse dans session_state."""
     answered = set()
     for ind in referentiel["indicators"]:
@@ -308,7 +317,7 @@ def _show_domain_form(session_id: int, campagne_id: int, referentiel: dict) -> N
     for tab_obj, (did, dom) in zip(tabs, dom_sorted):
         with tab_obj:
             _show_domain_content(
-                dom, session_id, campagne_id,
+                dom, session_id,
                 paliers, typologies, groupe_vals
             )
 
@@ -316,7 +325,6 @@ def _show_domain_form(session_id: int, campagne_id: int, referentiel: dict) -> N
 def _show_domain_content(
     dom: dict,
     session_id: int,
-    campagne_id: int,
     paliers: dict,
     typologies: dict,
     groupe_vals: dict,
@@ -325,13 +333,13 @@ def _show_domain_content(
     st.markdown(f"### {dom['libelle']}")
 
     rub_sorted = sorted(dom["rubriques"].items(), key=lambda x: x[1]["ordre"])
-    for rid, rub in rub_sorted:
+    for _rid, rub in rub_sorted:
         with st.expander(f"📂 {rub['libelle']}", expanded=True):
             pc_sorted = sorted(
                 rub["points_cles"].items(),
                 key=lambda x: x[1]["numero"]
             )
-            for pcid, pc in pc_sorted:
+            for _pcid, pc in pc_sorted:
                 st.markdown(
                     f"**Point clé {pc['numero']}** — {pc['libelle']}",
                     help=f"Point clé n°{pc['numero']}"
@@ -460,6 +468,7 @@ def _show_submission(session_id: int, referentiel: dict) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def show() -> None:
+    """Affiche le formulaire de collecte des indicateurs pour le référent."""
     st.title("Formulaire de collecte — Référent")
 
     session_id  = st.session_state.get("session_id")

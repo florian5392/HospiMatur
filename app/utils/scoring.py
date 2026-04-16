@@ -9,8 +9,11 @@ Règles :
   (seulement si toutes les typologies sont renseignées).
 - NULL (absence de ligne) ≠ palier 0.
 """
+# pylint: disable=duplicate-code,too-many-locals
 
 from __future__ import annotations
+
+import functools
 
 import pandas as pd
 
@@ -94,36 +97,36 @@ def _count_typologies() -> dict[int, int]:
         return {r["id_indicateur"]: r["nb"] for r in cur.fetchall()}
 
 
-def _calculate_effective_value(
-    row: pd.Series,
-    reponses: dict[int, int],
-    reponses_typo: dict[int, list[int]],
-    reponses_groupe: dict[int, int],
-    nb_typologies: dict[int, int],
+# ─────────────────────────────────────────────────────────────────────────────
+# Calcul de la valeur effective d'un indicateur (réutilisable)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _compute_valeur_effective(
+    row,
+    reponses: dict,
+    reponses_typo: dict,
+    reponses_groupe: dict,
+    nb_typologies: dict,
 ) -> float | None:
     """
-    Calcule la valeur effective d'un indicateur.
-    
-    Logique partagée entre build_score_df et scores_par_domaine_batch.
+    Retourne la valeur effective (0–4) d'un indicateur pour une session donnée,
+    ou None si l'indicateur n'est pas renseigné.
     """
     ind_id = row["ind_id"]
-
     if row["porteur"] == "GROUPE":
-        v = reponses_groupe.get(ind_id)
-        return float(v) if v is not None else None
-
+        val = reponses_groupe.get(ind_id)
+        return float(val) if val is not None else None
     if row["has_typologies"]:
         typo_vals = reponses_typo.get(ind_id, [])
         nb = nb_typologies.get(ind_id, 0)
         if nb > 0 and len(typo_vals) == nb:
             return float(sum(typo_vals) / nb)
         return None
+    val = reponses.get(ind_id)
+    return float(val) if val is not None else None
 
-    v = reponses.get(ind_id)
-    return float(v) if v is not None else None
 
-
-# ────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
 # Construction du DataFrame de scores enrichi
 # ────────────────────────────────────────────────────────────────────────────
 
@@ -141,17 +144,14 @@ def build_score_df(session_id: int, campagne_id: int) -> pd.DataFrame:
     if df.empty:
         return df
 
-    reponses       = _load_reponses(session_id)
-    reponses_typo  = _load_reponses_typo(session_id)
-    reponses_groupe = _load_reponses_groupe(campagne_id)
-    nb_typologies  = _count_typologies()
-
-    df["valeur_effective"] = df.apply(
-        lambda row: _calculate_effective_value(
-            row, reponses, reponses_typo, reponses_groupe, nb_typologies
-        ),
-        axis=1,
+    eff_fn = functools.partial(
+        _compute_valeur_effective,
+        reponses=_load_reponses(session_id),
+        reponses_typo=_load_reponses_typo(session_id),
+        reponses_groupe=_load_reponses_groupe(campagne_id),
+        nb_typologies=_count_typologies(),
     )
+    df["valeur_effective"] = df.apply(eff_fn, axis=1)
     return df
 
 
@@ -265,9 +265,10 @@ def scores_par_domaine_batch(
 
     # Toutes les réponses standard pour ces sessions
     with get_cursor() as cur:
-        query = (
-            "SELECT id_session, id_indicateur, valeur FROM reponses "
-            f"WHERE id_session IN ({placeholders})"
+        cur.execute(
+            f"SELECT id_session, id_indicateur, valeur "
+            f"FROM reponses WHERE id_session IN ({placeholders})",
+            session_ids,
         )
         cur.execute(query, session_ids)
         all_reponses: dict[int, dict[int, int]] = {}
@@ -276,29 +277,37 @@ def scores_par_domaine_batch(
 
     # Toutes les réponses par typologie pour ces sessions
     with get_cursor() as cur:
-        query = (
-            "SELECT id_session, id_indicateur, valeur FROM reponses_typologies "
-            f"WHERE id_session IN ({placeholders})"
+        cur.execute(
+            f"SELECT id_session, id_indicateur, valeur "
+            f"FROM reponses_typologies WHERE id_session IN ({placeholders})",
+            session_ids,
         )
         cur.execute(query, session_ids)
         all_typo: dict[int, dict[int, list[int]]] = {}
         for r in cur.fetchall():
-            all_typo.setdefault(r["id_session"], {}).setdefault(
-                r["id_indicateur"], []
-            ).append(r["valeur"])
+            (all_typo
+             .setdefault(r["id_session"], {})
+             .setdefault(r["id_indicateur"], [])
+             .append(r["valeur"]))
+
+    ordre_ref = (
+        df_ind[["domaine_id", "domaine_ordre"]]
+        .drop_duplicates()
+        .set_index("domaine_id")["domaine_ordre"]
+        .to_dict()
+    )
 
     result: dict[int, list[dict]] = {}
     for sid in session_ids:
-        reponses      = all_reponses.get(sid, {})
-        reponses_typo = all_typo.get(sid, {})
         df = df_ind.copy()
-
-        df["valeur_effective"] = df.apply(
-            lambda row: _calculate_effective_value(
-                row, reponses, reponses_typo, reponses_groupe, nb_typologies
-            ),
-            axis=1,
+        eff_fn = functools.partial(
+            _compute_valeur_effective,
+            reponses=all_reponses.get(sid, {}),
+            reponses_typo=all_typo.get(sid, {}),
+            reponses_groupe=reponses_groupe,
+            nb_typologies=nb_typologies,
         )
+        df["valeur_effective"] = df.apply(eff_fn, axis=1)
 
         dom_scores = []
         for (did, dcode, dlibelle), grp in df.groupby(
@@ -314,13 +323,7 @@ def scores_par_domaine_batch(
                 "total":           int(len(grp)),
             })
 
-        ordre = (
-            df[["domaine_id", "domaine_ordre"]]
-            .drop_duplicates()
-            .set_index("domaine_id")["domaine_ordre"]
-            .to_dict()
-        )
-        dom_scores.sort(key=lambda x: ordre.get(x["domaine_id"], 0))
+        dom_scores.sort(key=lambda x, _o=ordre_ref: _o.get(x["domaine_id"], 0))
         result[sid] = dom_scores
 
     return result
