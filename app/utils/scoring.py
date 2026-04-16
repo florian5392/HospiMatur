@@ -270,7 +270,6 @@ def scores_par_domaine_batch(
             f"FROM reponses WHERE id_session IN ({placeholders})",
             session_ids,
         )
-        cur.execute(query, session_ids)
         all_reponses: dict[int, dict[int, int]] = {}
         for r in cur.fetchall():
             all_reponses.setdefault(r["id_session"], {})[r["id_indicateur"]] = r["valeur"]
@@ -282,7 +281,6 @@ def scores_par_domaine_batch(
             f"FROM reponses_typologies WHERE id_session IN ({placeholders})",
             session_ids,
         )
-        cur.execute(query, session_ids)
         all_typo: dict[int, dict[int, list[int]]] = {}
         for r in cur.fetchall():
             (all_typo
