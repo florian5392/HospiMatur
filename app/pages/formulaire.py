@@ -12,15 +12,10 @@ Workflow :
 from __future__ import annotations
 import streamlit as st
 
-from mysql.connector import Error
 from app.db.connection import get_cursor
 
 from app.components.progress_bar import render_progress_bar, domain_badge, domain_status
 from app.components.indicateur_widget import render_indicateur
-from app.config import TYPE_COLORS
-
-
-
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Chargement des données référentiel
