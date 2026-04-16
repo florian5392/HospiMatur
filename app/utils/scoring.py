@@ -94,6 +94,35 @@ def _count_typologies() -> dict[int, int]:
         return {r["id_indicateur"]: r["nb"] for r in cur.fetchall()}
 
 
+def _calculate_effective_value(
+    row: pd.Series,
+    reponses: dict[int, int],
+    reponses_typo: dict[int, list[int]],
+    reponses_groupe: dict[int, int],
+    nb_typologies: dict[int, int],
+) -> float | None:
+    """
+    Calcule la valeur effective d'un indicateur.
+    
+    Logique partagée entre build_score_df et scores_par_domaine_batch.
+    """
+    ind_id = row["ind_id"]
+
+    if row["porteur"] == "GROUPE":
+        v = reponses_groupe.get(ind_id)
+        return float(v) if v is not None else None
+
+    if row["has_typologies"]:
+        typo_vals = reponses_typo.get(ind_id, [])
+        nb = nb_typologies.get(ind_id, 0)
+        if nb > 0 and len(typo_vals) == nb:
+            return float(sum(typo_vals) / nb)
+        return None
+
+    v = reponses.get(ind_id)
+    return float(v) if v is not None else None
+
+
 # ────────────────────────────────────────────────────────────────────────────
 # Construction du DataFrame de scores enrichi
 # ────────────────────────────────────────────────────────────────────────────
@@ -117,24 +146,12 @@ def build_score_df(session_id: int, campagne_id: int) -> pd.DataFrame:
     reponses_groupe = _load_reponses_groupe(campagne_id)
     nb_typologies  = _count_typologies()
 
-    def effective_value(row) -> float | None:
-        ind_id = row["ind_id"]
-
-        if row["porteur"] == "GROUPE":
-            v = reponses_groupe.get(ind_id)
-            return float(v) if v is not None else None
-
-        if row["has_typologies"]:
-            typo_vals = reponses_typo.get(ind_id, [])
-            nb = nb_typologies.get(ind_id, 0)
-            if nb > 0 and len(typo_vals) == nb:
-                return float(sum(typo_vals) / nb)
-            return None
-
-        v = reponses.get(ind_id)
-        return float(v) if v is not None else None
-
-    df["valeur_effective"] = df.apply(effective_value, axis=1)
+    df["valeur_effective"] = df.apply(
+        lambda row: _calculate_effective_value(
+            row, reponses, reponses_typo, reponses_groupe, nb_typologies
+        ),
+        axis=1,
+    )
     return df
 
 
@@ -160,8 +177,6 @@ def scores_par_domaine(session_id: int, campagne_id: int) -> list[dict]:
         return []
 
     result = []
-    ordre = {}
-
     for (did, dcode, dlibelle), grp in df.groupby(
         ["domaine_id", "domaine_code", "domaine_libelle"]
     ):
@@ -174,10 +189,14 @@ def scores_par_domaine(session_id: int, campagne_id: int) -> list[dict]:
             "answered":        int(answered.count()),
             "total":           int(len(grp)),
         })
-        # Enregistrer l'ordre au moment du traitement
-        if int(did) not in ordre:
-            ordre[int(did)] = grp["domaine_ordre"].iloc[0]
 
+    # trier par domaine_ordre
+    ordre = (
+        df[["domaine_id", "domaine_ordre"]]
+        .drop_duplicates()
+        .set_index("domaine_id")["domaine_ordre"]
+        .to_dict()
+    )
     result.sort(key=lambda x: ordre.get(x["domaine_id"], 0))
     return result
 
@@ -189,8 +208,6 @@ def scores_par_rubrique(session_id: int, campagne_id: int) -> list[dict]:
         return []
 
     result = []
-    ordre = {}
-
     for (rid, rcode, rlibelle, did), grp in df.groupby(
         ["rubrique_id", "rubrique_code", "rubrique_libelle", "domaine_id"]
     ):
@@ -204,67 +221,18 @@ def scores_par_rubrique(session_id: int, campagne_id: int) -> list[dict]:
             "answered":         int(answered.count()),
             "total":            int(len(grp)),
         })
-        # Enregistrer l'ordre au moment du traitement
-        if int(rid) not in ordre:
-            ordre[int(rid)] = {
-                "domaine_ordre": grp["domaine_ordre"].iloc[0],
-                "rubrique_ordre": grp["rubrique_ordre"].iloc[0],
-            }
 
+    ordre = (
+        df[["rubrique_id", "domaine_ordre", "rubrique_ordre"]]
+        .drop_duplicates()
+        .set_index("rubrique_id")
+        .to_dict("index")
+    )
     result.sort(key=lambda x: (
         ordre.get(x["rubrique_id"], {}).get("domaine_ordre", 0),
         ordre.get(x["rubrique_id"], {}).get("rubrique_ordre", 0),
     ))
     return result
-
-
-def _calculate_domaine_scores(
-    df: pd.DataFrame,
-    reponses: dict,
-    reponses_typo: dict,
-    reponses_groupe: dict,
-    nb_typologies: dict,
-) -> list[dict]:
-    """
-    Sous-fonction pour calculer les scores par domaine.
-    Réduit la complexité de scores_par_domaine_batch.
-    """
-    def _effective_value(row) -> float | None:
-        ind_id = row["ind_id"]
-        if row["porteur"] == "GROUPE":
-            v = reponses_groupe.get(ind_id)
-            return float(v) if v is not None else None
-        if row["has_typologies"]:
-            typo_vals = reponses_typo.get(ind_id, [])
-            nb = nb_typologies.get(ind_id, 0)
-            if nb > 0 and len(typo_vals) == nb:
-                return float(sum(typo_vals) / nb)
-            return None
-        v = reponses.get(ind_id)
-        return float(v) if v is not None else None
-
-    df["valeur_effective"] = df.apply(_effective_value, axis=1)
-
-    dom_scores = []
-    ordre = {}
-
-    for (did, dcode, dlibelle), grp in df.groupby(
-        ["domaine_id", "domaine_code", "domaine_libelle"]
-    ):
-        answered = grp["valeur_effective"].dropna()
-        dom_scores.append({
-            "domaine_id":      int(did),
-            "domaine_code":    dcode,
-            "domaine_libelle": dlibelle,
-            "score":           round(float(answered.mean()), 2) if not answered.empty else None,
-            "answered":        int(answered.count()),
-            "total":           int(len(grp)),
-        })
-        if int(did) not in ordre:
-            ordre[int(did)] = grp["domaine_ordre"].iloc[0]
-
-    dom_scores.sort(key=lambda x: ordre.get(x["domaine_id"], 0))
-    return dom_scores
 
 
 def scores_par_domaine_batch(
@@ -325,13 +293,35 @@ def scores_par_domaine_batch(
         reponses_typo = all_typo.get(sid, {})
         df = df_ind.copy()
 
-        result[sid] = _calculate_domaine_scores(
-            df,
-            reponses,
-            reponses_typo,
-            reponses_groupe,
-            nb_typologies,
+        df["valeur_effective"] = df.apply(
+            lambda row: _calculate_effective_value(
+                row, reponses, reponses_typo, reponses_groupe, nb_typologies
+            ),
+            axis=1,
         )
+
+        dom_scores = []
+        for (did, dcode, dlibelle), grp in df.groupby(
+            ["domaine_id", "domaine_code", "domaine_libelle"]
+        ):
+            answered = grp["valeur_effective"].dropna()
+            dom_scores.append({
+                "domaine_id":      int(did),
+                "domaine_code":    dcode,
+                "domaine_libelle": dlibelle,
+                "score":           round(float(answered.mean()), 2) if not answered.empty else None,
+                "answered":        int(answered.count()),
+                "total":           int(len(grp)),
+            })
+
+        ordre = (
+            df[["domaine_id", "domaine_ordre"]]
+            .drop_duplicates()
+            .set_index("domaine_id")["domaine_ordre"]
+            .to_dict()
+        )
+        dom_scores.sort(key=lambda x: ordre.get(x["domaine_id"], 0))
+        result[sid] = dom_scores
 
     return result
 
