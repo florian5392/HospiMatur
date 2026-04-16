@@ -16,6 +16,7 @@ from __future__ import annotations
 import streamlit as st
 
 from app.db.connection import get_cursor
+
 from app.components.progress_bar import render_progress_bar, domain_badge, domain_status
 from app.components.indicateur_widget import render_indicateur
 

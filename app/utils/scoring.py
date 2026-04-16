@@ -20,13 +20,13 @@ import pandas as pd
 from app.db.connection import get_cursor
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Chargement brut des données
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────
+# Requête SQL commune
+# ────────────────────────────────────────────────────────────────────────────
 
-def _load_indicators() -> pd.DataFrame:
-    """Charge tous les indicateurs avec leur hiérarchie (domaine, rubrique, point clé)."""
-    sql = """
+def _get_indicators_sql() -> str:
+    """Retourne la requête SQL pour charger les indicateurs avec leur hiérarchie."""
+    return """
         SELECT
             d.id   AS domaine_id,   d.code AS domaine_code,   d.libelle AS domaine_libelle,   d.ordre AS domaine_ordre,
             r.id   AS rubrique_id,  r.code AS rubrique_code,  r.libelle AS rubrique_libelle,  r.ordre AS rubrique_ordre,
@@ -39,8 +39,16 @@ def _load_indicators() -> pd.DataFrame:
         JOIN domaines     d  ON r.id_domaine    = d.id
         ORDER BY d.ordre, r.ordre, pc.ordre, i.lettre
     """
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# Chargement brut des données
+# ────────────────────────────────────────────────────────────────────────────
+
+def _load_indicators() -> pd.DataFrame:
+    """Charge tous les indicateurs avec leur hiérarchie (domaine, rubrique, point clé)."""
     with get_cursor() as cur:
-        cur.execute(sql)
+        cur.execute(_get_indicators_sql())
         return pd.DataFrame(cur.fetchall())
 
 
@@ -120,7 +128,7 @@ def _compute_valeur_effective(
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Construction du DataFrame de scores enrichi
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────
 
 def build_score_df(session_id: int, campagne_id: int) -> pd.DataFrame:
     """
@@ -147,9 +155,9 @@ def build_score_df(session_id: int, campagne_id: int) -> pd.DataFrame:
     return df
 
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────
 # Fonctions de score publiques
-# ─────────────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────────────
 
 def score_global(session_id: int, campagne_id: int) -> float | None:
     """Score global toutes rubriques confondues (sur 4). None si aucune réponse."""
@@ -227,7 +235,10 @@ def scores_par_rubrique(session_id: int, campagne_id: int) -> list[dict]:
     return result
 
 
-def scores_par_domaine_batch(session_ids: list[int], campagne_id: int) -> dict[int, list[dict]]:
+def scores_par_domaine_batch(
+    session_ids: list[int],
+    campagne_id: int,
+) -> dict[int, list[dict]]:
     """
     Calcule les scores par domaine pour une liste de sessions en un minimum de requêtes.
 
@@ -259,6 +270,7 @@ def scores_par_domaine_batch(session_ids: list[int], campagne_id: int) -> dict[i
             f"FROM reponses WHERE id_session IN ({placeholders})",
             session_ids,
         )
+        cur.execute(query, session_ids)
         all_reponses: dict[int, dict[int, int]] = {}
         for r in cur.fetchall():
             all_reponses.setdefault(r["id_session"], {})[r["id_indicateur"]] = r["valeur"]
@@ -270,6 +282,7 @@ def scores_par_domaine_batch(session_ids: list[int], campagne_id: int) -> dict[i
             f"FROM reponses_typologies WHERE id_session IN ({placeholders})",
             session_ids,
         )
+        cur.execute(query, session_ids)
         all_typo: dict[int, dict[int, list[int]]] = {}
         for r in cur.fetchall():
             (all_typo

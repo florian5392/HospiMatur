@@ -1,4 +1,4 @@
-# HospiConnect Maturité — Application de collecte des indicateurs
+# HospiConnect Maturité - Application de collecte des indicateurs
 
 Application Streamlit de collecte et de pilotage des indicateurs de maturité HospiConnect, basée sur le référentiel ANS « Indicateurs de maturité de la gestion de l'identité numérique des professionnels » v1.0.
 
@@ -6,7 +6,7 @@ Application Streamlit de collecte et de pilotage des indicateurs de maturité Ho
 
 ## Contexte
 
-L'Hospitalité Saint-Thomas de Villeneuve (groupe multi-sites de santé privé) déploie le programme HospiConnect en réponse aux exigences réglementaires ANS (2026-2028). Cette application permet de mesurer semestriellement la maturité de chaque établissement sur 5 domaines et 123 indicateurs définis par l'ANS, et d'en piloter l'évolution dans le temps.
+L'Hospitalité Saint-Thomas de Villeneuve déploie le programme HospiConnect en réponse aux exigences réglementaires ANS (2026-2028). Cette application permet de mesurer périodiquement la maturité de chaque établissement sur les 5 domaines et 123 indicateurs définis par l'ANS, et d'en piloter l'évolution dans le temps.
 
 ---
 

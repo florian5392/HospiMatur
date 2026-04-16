@@ -16,9 +16,11 @@ import datetime
 import streamlit as st
 import pandas as pd
 
-from app.db.connection import get_cursor
-from app.utils.auth import is_admin, login, logout
 from mysql.connector import Error
+from app.db.connection import get_cursor
+
+from app.utils.auth import is_admin, login, logout
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
