@@ -31,8 +31,9 @@ hospiconnect/
 │       ├── auth.py              # Authentification admin simple
 │       └── scoring.py           # Calcul des scores de maturité
 ├── init/
-│   ├── 01_create_tables.sql
-│   └── 02_init_referentiel.sql
+│   ├── 01_create_tables.sql     # Création du schéma
+│   ├── 02_init_referentiel.sql  # Données ANS (123 indicateurs)
+│   └── 03_create_reponses_groupe.sql  # Table des réponses groupe
 ├── docker-compose.yml
 ├── .env.example
 ├── requirements.txt
@@ -56,41 +57,152 @@ hospiconnect/
 
 ### Prérequis
 
-- Docker et Docker Compose installés
-- Python 3.11+ installé
-- pip installé
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (ou Docker Engine + Docker Compose v2) installé et démarré
+- Python 3.11+ et pip installés
 
-### 1. Cloner le projet et configurer l'environnement
+---
+
+### Option A — MySQL via Docker + Streamlit en local (développement)
+
+C'est le mode recommandé pour développer et tester l'application.
+
+#### 1. Cloner le dépôt et configurer l'environnement
 
 ```bash
 git clone <repo>
 cd hospiconnect
 cp .env.example .env
-# Éditer .env avec les valeurs souhaitées
 ```
 
-### 2. Démarrer MySQL via Docker
+Éditer `.env` et personnaliser au minimum `ADMIN_PASSWORD` :
+
+```env
+DB_HOST=localhost
+DB_PORT=3306
+DB_NAME=hospiconnect
+DB_USER=hospiconnect_user
+DB_PASSWORD=hospiconnect_pass
+ADMIN_PASSWORD=motdepasseadmin
+```
+
+#### 2. Démarrer MySQL
 
 ```bash
 docker compose up -d
-# Attendre que MySQL soit prêt (vérifier avec docker compose logs mysql)
 ```
 
-Les scripts `init/01_create_tables.sql` et `init/02_init_referentiel.sql` sont exécutés automatiquement au premier démarrage.
+MySQL démarre sur le port `3306`. Les trois scripts SQL du dossier `init/` sont exécutés automatiquement au premier démarrage (création des tables + chargement du référentiel ANS).
 
-### 3. Installer les dépendances Python
+Vérifier que la base est prête :
+
+```bash
+docker compose logs -f mysql
+# Attendre la ligne : ready for connections
+```
+
+Ou tester directement :
+
+```bash
+docker compose exec mysql mysqladmin ping -u hospiconnect_user -phospiconnect_pass
+# → mysqld is alive
+```
+
+#### 3. Installer les dépendances Python
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Lancer l'application
+#### 4. Lancer Streamlit
 
 ```bash
 streamlit run app/main.py
 ```
 
-L'application est accessible sur `http://localhost:8501`.
+L'application est accessible sur **http://localhost:8501**.
+
+---
+
+### Option B — Tout via Docker Compose (déploiement ou démo)
+
+> À utiliser si vous souhaitez faire tourner l'ensemble de la stack (MySQL + Streamlit) sans rien installer en local côté Python.
+
+#### 1. Ajouter le service Streamlit au `docker-compose.yml`
+
+Ajouter le bloc suivant dans la section `services` :
+
+```yaml
+  streamlit:
+    image: python:3.11-slim
+    container_name: hospiconnect_app
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    environment:
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_NAME=${DB_NAME:-hospiconnect}
+      - DB_USER=${DB_USER:-hospiconnect_user}
+      - DB_PASSWORD=${DB_PASSWORD:-hospiconnect_pass}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin_password}
+    command: >
+      sh -c "pip install -r requirements.txt -q &&
+             streamlit run app/main.py
+             --server.address=0.0.0.0
+             --server.port=8501"
+    depends_on:
+      mysql:
+        condition: service_healthy
+```
+
+> **Important :** avec cette configuration, `DB_HOST` doit être `mysql` (nom du service Docker) et non `localhost`.
+
+#### 2. Démarrer la stack complète
+
+```bash
+cp .env.example .env
+# Éditer .env si besoin
+docker compose up -d
+```
+
+#### 3. Accéder à l'application
+
+Une fois le conteneur `hospiconnect_app` démarré (attendre ~30 s le temps de l'installation des dépendances) :
+
+**http://localhost:8501**
+
+Suivre les logs si besoin :
+
+```bash
+docker compose logs -f streamlit
+```
+
+---
+
+### Commandes Docker utiles
+
+```bash
+# Voir l'état des conteneurs
+docker compose ps
+
+# Consulter les logs MySQL
+docker compose logs -f mysql
+
+# Arrêter la stack sans supprimer les données
+docker compose stop
+
+# Arrêter et supprimer les conteneurs (les données MySQL sont préservées dans le volume)
+docker compose down
+
+# Tout supprimer y compris le volume MySQL (⚠ perte des données)
+docker compose down -v
+
+# Réinitialiser complètement la base (réexécute les scripts init/)
+docker compose down -v && docker compose up -d
+```
 
 ---
 
@@ -99,12 +211,12 @@ L'application est accessible sur `http://localhost:8501`.
 Fichier `.env` à créer à partir de `.env.example` :
 
 ```env
-DB_HOST=localhost
+DB_HOST=localhost       # "mysql" si Streamlit tourne dans Docker
 DB_PORT=3306
 DB_NAME=hospiconnect
 DB_USER=hospiconnect_user
 DB_PASSWORD=hospiconnect_pass
-ADMIN_PASSWORD=admin_password
+ADMIN_PASSWORD=admin_password   # Mot de passe de l'espace Administration
 ```
 
 ---
@@ -145,6 +257,7 @@ Fonctions :
 - `sessions` : sessions de saisie (établissement + campagne + référent)
 - `reponses` : réponses aux indicateurs standards (palier 0-4)
 - `reponses_typologies` : réponses aux indicateurs par typologie
+- `reponses_groupe` : valeurs des indicateurs GROUPE saisies par l'admin
 
 ### Champs importants sur `indicateurs`
 
@@ -181,7 +294,7 @@ Fonctions :
 
 - Les indicateurs avec `inverse = TRUE` sont des indicateurs de risque
 - Un palier 0 = situation la plus risquée, palier 4 = situation la plus sûre
-- L'interface doit signaler visuellement ce comportement inversé au référent
+- L'interface signale visuellement ce comportement inversé au référent
 
 ---
 
