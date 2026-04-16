@@ -1,4 +1,4 @@
-# HospiConnect Maturité — Application de collecte des indicateurs
+# HospiConnect Maturité - Application de collecte des indicateurs
 
 Application Streamlit de collecte et de pilotage des indicateurs de maturité HospiConnect, basée sur le référentiel ANS « Indicateurs de maturité de la gestion de l'identité numérique des professionnels » v1.0.
 
