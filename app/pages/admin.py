@@ -7,6 +7,8 @@ Onglets :
   3. Sessions
   4. Indicateurs Groupe
 """
+# pylint: disable=too-many-locals,too-many-branches,too-many-statements
+# pylint: disable=broad-exception-caught
 
 from __future__ import annotations
 import io
@@ -141,7 +143,8 @@ def _tab_campagnes() -> None:
     try:
         with get_cursor() as cur:
             cur.execute(
-                "SELECT id, libelle, date_debut, date_fin, statut FROM campagnes ORDER BY date_debut DESC"
+                "SELECT id, libelle, date_debut, date_fin, statut "
+                "FROM campagnes ORDER BY date_debut DESC"
             )
             campagnes = cur.fetchall()
     except Exception as exc:
@@ -177,7 +180,8 @@ def _tab_campagnes() -> None:
                             nb = cur.fetchone()["nb"]
                         if nb > 0:
                             st.warning(
-                                f"Impossible de fermer : {nb} session(s) EN_COURS sur cette campagne."
+                                f"Impossible de fermer : {nb} "
+                                "session(s) EN_COURS sur cette campagne."
                             )
                             return
                     except Exception as exc:
@@ -261,7 +265,10 @@ def _tab_sessions() -> None:
     try:
         with get_cursor() as cur:
             # Compte les indicateurs ETABLISSEMENT hors has_typologies
-            cur.execute("SELECT COUNT(*) AS nb FROM indicateurs WHERE porteur='ETABLISSEMENT' AND has_typologies=0")
+            cur.execute(
+                "SELECT COUNT(*) AS nb FROM indicateurs "
+                "WHERE porteur='ETABLISSEMENT' AND has_typologies=0"
+            )
             total_std = cur.fetchone()["nb"]
             # Compte les typologies ETABLISSEMENT
             cur.execute("""
@@ -448,7 +455,7 @@ def _tab_indicateurs_groupe() -> None:
 
             col_sl, col_desc = st.columns([4, 6])
             with col_sl:
-                OPTIONS_GROUPE = [None, 0, 1, 2, 3, 4]
+                options_groupe = [None, 0, 1, 2, 3, 4]
 
                 def _on_change_groupe(
                     _camp_id=campagne_id,
@@ -487,7 +494,7 @@ def _tab_indicateurs_groupe() -> None:
 
                 val = st.select_slider(
                     label="Palier",
-                    options=OPTIONS_GROUPE,
+                    options=options_groupe,
                     format_func=lambda x: "— Non renseigné" if x is None else str(x),
                     key=key_val,
                     label_visibility="collapsed",
@@ -536,13 +543,14 @@ def _tab_indicateurs_groupe() -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def show() -> None:
+    """Affiche la page administration (authentification + 4 onglets de gestion)."""
     st.title("Administration")
 
     if not is_admin():
         _show_login_form()
         return
 
-    col_title, col_logout = st.columns([9, 1])
+    _, col_logout = st.columns([9, 1])
     with col_logout:
         if st.button("Déconnexion", type="secondary"):
             logout()

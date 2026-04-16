@@ -1,3 +1,4 @@
+"""Configuration de l'application HospiConnect Maturité (variables d'env, constantes UI)."""
 import os
 import hmac
 from dotenv import load_dotenv

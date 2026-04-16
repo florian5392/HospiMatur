@@ -4,6 +4,8 @@ Dashboard de consultation — HospiConnect Maturité
 T14 — Vue par établissement (score, radar, tableau détaillé, comparaison)
 T15 — Vue consolidée groupe (tableau multi-établissements, graphe, alertes)
 """
+# pylint: disable=too-many-locals,too-many-branches,too-many-statements
+# pylint: disable=broad-exception-caught
 
 from __future__ import annotations
 import io
@@ -100,7 +102,7 @@ def _gauge(score: float | None, title: str = "Score global") -> go.Figure:
         },
         number={"suffix": " / 4", "font": {"size": 28}},
     ))
-    fig.update_layout(height=280, margin=dict(t=60, b=20, l=20, r=20))
+    fig.update_layout(height=280, margin={"t": 60, "b": 20, "l": 20, "r": 20})
     return fig
 
 
@@ -114,17 +116,17 @@ def _radar(scores: list[dict]) -> go.Figure:
         theta=labels + [labels[0]],
         fill="toself",
         fillcolor="rgba(31, 119, 180, 0.3)",
-        line=dict(color="#1f77b4"),
+        line={"color": "#1f77b4"},
         hovertemplate="%{theta}<br>Score : %{r:.2f}<extra></extra>",
         customdata=[[lf] for lf in labels_full + [labels_full[0]]],
     ))
     fig.update_layout(
-        polar=dict(
-            radialaxis=dict(visible=True, range=[0, 4], tickfont=dict(size=10)),
-        ),
+        polar={
+            "radialaxis": {"visible": True, "range": [0, 4], "tickfont": {"size": 10}},
+        },
         showlegend=False,
         height=380,
-        margin=dict(t=40, b=40, l=60, r=60),
+        margin={"t": 40, "b": 40, "l": 60, "r": 60},
     )
     return fig
 
@@ -186,7 +188,9 @@ def _tab_etablissement() -> None:
     # Tableau par domaine
     st.subheader("Scores par domaine")
     if dom_scores:
-        df_dom = pd.DataFrame(dom_scores)[["domaine_code", "domaine_libelle", "score", "answered", "total"]]
+        df_dom = pd.DataFrame(dom_scores)[
+            ["domaine_code", "domaine_libelle", "score", "answered", "total"]
+        ]
         df_dom.columns = ["Code", "Domaine", "Score /4", "Renseignés", "Total"]
         df_dom["Score /4"] = df_dom["Score /4"].apply(
             lambda s: f"{s:.2f}" if s is not None else "—"
@@ -197,7 +201,9 @@ def _tab_etablissement() -> None:
     st.subheader("Scores par rubrique")
     rub_scores = scores_par_rubrique(session_id, camp_id)
     if rub_scores:
-        df_rub = pd.DataFrame(rub_scores)[["rubrique_code", "rubrique_libelle", "score", "answered", "total"]]
+        df_rub = pd.DataFrame(rub_scores)[
+            ["rubrique_code", "rubrique_libelle", "score", "answered", "total"]
+        ]
         df_rub.columns = ["Code", "Rubrique", "Score /4", "Renseignés", "Total"]
         df_rub["Score /4"] = df_rub["Score /4"].apply(
             lambda s: f"{s:.2f}" if s is not None else "—"
@@ -226,7 +232,11 @@ def _tab_etablissement() -> None:
     other_camps = [c for c in campagnes if c["id"] != campagne["id"]]
     if other_camps:
         ref_camp_opts = {c["libelle"]: c for c in other_camps}
-        sel_ref = st.selectbox("Campagne de référence", ["—"] + list(ref_camp_opts.keys()), key="db_ref_camp")
+        sel_ref = st.selectbox(
+            "Campagne de référence",
+            ["—"] + list(ref_camp_opts.keys()),
+            key="db_ref_camp",
+        )
         if sel_ref != "—":
             ref_camp = ref_camp_opts[sel_ref]
             try:
@@ -260,16 +270,25 @@ def _show_comparison_chart(
     all_codes = sorted(set(list(codes_a.keys()) + list(codes_b.keys())))
 
     fig = go.Figure([
-        go.Bar(name=label_a, x=all_codes, y=[codes_a.get(c, 0) for c in all_codes], marker_color="#1f77b4"),
-        go.Bar(name=label_b, x=all_codes, y=[codes_b.get(c, 0) for c in all_codes], marker_color="#aec7e8"),
+        go.Bar(
+            name=label_a, x=all_codes,
+            y=[codes_a.get(c, 0) for c in all_codes],
+            marker_color="#1f77b4",
+        ),
+        go.Bar(
+            name=label_b, x=all_codes,
+            y=[codes_b.get(c, 0) for c in all_codes],
+            marker_color="#aec7e8",
+        ),
     ])
     fig.update_layout(
         barmode="group",
-        yaxis=dict(range=[0, 4], title="Score /4"),
+        yaxis={"range": [0, 4], "title": "Score /4"},
         xaxis_title="Domaine",
         height=350,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        margin=dict(t=40, b=40, l=40, r=20),
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02,
+                "xanchor": "right", "x": 1},
+        margin={"t": 40, "b": 40, "l": 40, "r": 20},
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -368,11 +387,12 @@ def _tab_groupe() -> None:
         ))
     fig.update_layout(
         barmode="group",
-        yaxis=dict(range=[0, 4], title="Score /4"),
+        yaxis={"range": [0, 4], "title": "Score /4"},
         xaxis_title="Domaine",
         height=400,
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        margin=dict(t=40, b=40, l=40, r=20),
+        legend={"orientation": "h", "yanchor": "bottom", "y": 1.02,
+                "xanchor": "right", "x": 1},
+        margin={"t": 40, "b": 40, "l": 40, "r": 20},
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -417,6 +437,7 @@ def _show_group_alerts(df: pd.DataFrame, domaines: list[dict]) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def show() -> None:
+    """Affiche le dashboard de maturité (vue établissement + vue groupe)."""
     st.title("Dashboard de maturité")
 
     tab_etab, tab_groupe = st.tabs([
