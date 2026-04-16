@@ -237,20 +237,22 @@ def scores_par_domaine_batch(session_ids: list[int], campagne_id: int) -> dict[i
 
     # Toutes les réponses standard pour ces sessions
     with get_cursor() as cur:
-        cur.execute(
-            f"SELECT id_session, id_indicateur, valeur FROM reponses WHERE id_session IN ({placeholders})",
-            session_ids,
+        query = (
+          f"SELECT id_session, id_indicateur, valeur FROM reponses "
+          f"WHERE id_session IN ({placeholders})"
         )
+        cur.execute(query, session_ids)
         all_reponses: dict[int, dict[int, int]] = {}
         for r in cur.fetchall():
             all_reponses.setdefault(r["id_session"], {})[r["id_indicateur"]] = r["valeur"]
 
     # Toutes les réponses par typologie pour ces sessions
     with get_cursor() as cur:
-        cur.execute(
-            f"SELECT id_session, id_indicateur, valeur FROM reponses_typologies WHERE id_session IN ({placeholders})",
-            session_ids,
-        )
+        query = (
+            f"SELECT id_session, id_indicateur, valeur FROM reponses_typologies "
+            f"WHERE id_session IN ({placeholders})"
+          )
+        cur.execute(query, session_ids)
         all_typo: dict[int, dict[int, list[int]]] = {}
         for r in cur.fetchall():
             all_typo.setdefault(r["id_session"], {}).setdefault(r["id_indicateur"], []).append(r["valeur"])
