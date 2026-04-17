@@ -1188,53 +1188,88 @@ JOIN (
 WHERE i.type = 'GOUVERNANCE'
   AND NOT EXISTS (SELECT 1 FROM paliers WHERE id_indicateur = i.id AND valeur = p.valeur);
 
--- Paliers spécifiques PILOT-04F (délai)
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'Non mesuré.' FROM indicateurs WHERE code = 'PILOT-04F';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, '> 30 jours.' FROM indicateurs WHERE code = 'PILOT-04F';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, '15–30 jours.' FROM indicateurs WHERE code = 'PILOT-04F';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, '8–14 jours.' FROM indicateurs WHERE code = 'PILOT-04F';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, '0–7 jours.' FROM indicateurs WHERE code = 'PILOT-04F';
+-- Paliers spécifiques PILOT-04F (délai) — remplacent les paliers PILOTAGE génériques
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'Non mesuré.' FROM indicateurs WHERE code = 'PILOT-04F'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, '> 30 jours.' FROM indicateurs WHERE code = 'PILOT-04F'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, '15–30 jours.' FROM indicateurs WHERE code = 'PILOT-04F'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, '8–14 jours.' FROM indicateurs WHERE code = 'PILOT-04F'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, '0–7 jours.' FROM indicateurs WHERE code = 'PILOT-04F'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
 
 -- Paliers PROC-08A spécifiques
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'Aucun inventaire des services numériques.' FROM indicateurs WHERE code = 'PROC-08A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, 'Inventaire partiel ou informel : listes éclatées, non consolidées.' FROM indicateurs WHERE code = 'PROC-08A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, 'Inventaire formalisé : responsable identifié, sources mobilisées précisées.' FROM indicateurs WHERE code = 'PROC-08A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, 'Inventaire exploitable : le contenu permet de qualifier les services numériques.' FROM indicateurs WHERE code = 'PROC-08A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, 'Inventaire stabilisé : complet, documenté et utilisable comme base commune.' FROM indicateurs WHERE code = 'PROC-08A';
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'Aucun inventaire des services numériques.' FROM indicateurs WHERE code = 'PROC-08A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, 'Inventaire partiel ou informel : listes éclatées, non consolidées.' FROM indicateurs WHERE code = 'PROC-08A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, 'Inventaire formalisé : responsable identifié, sources mobilisées précisées.' FROM indicateurs WHERE code = 'PROC-08A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, 'Inventaire exploitable : le contenu permet de qualifier les services numériques.' FROM indicateurs WHERE code = 'PROC-08A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, 'Inventaire stabilisé : complet, documenté et utilisable comme base commune.' FROM indicateurs WHERE code = 'PROC-08A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
 
 -- Paliers PROC-09A / PROC-09B spécifiques (cartographie)
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'Aucune cartographie des modes d\'authentification.' FROM indicateurs WHERE code = 'PROC-09A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, 'Cartographie informelle/partielle : informations dispersées.' FROM indicateurs WHERE code = 'PROC-09A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, 'Cartographie formalisée pour une partie des services.' FROM indicateurs WHERE code = 'PROC-09A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, 'Cartographie applicable : informations exploitables pour la majorité des services.' FROM indicateurs WHERE code = 'PROC-09A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, 'Cartographie stabilisée : informations exploitables pour l\'ensemble des services.' FROM indicateurs WHERE code = 'PROC-09A';
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'Aucune cartographie des modes d\'authentification.' FROM indicateurs WHERE code = 'PROC-09A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, 'Cartographie informelle/partielle : informations dispersées.' FROM indicateurs WHERE code = 'PROC-09A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, 'Cartographie formalisée pour une partie des services.' FROM indicateurs WHERE code = 'PROC-09A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, 'Cartographie applicable : informations exploitables pour la majorité des services.' FROM indicateurs WHERE code = 'PROC-09A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, 'Cartographie stabilisée : informations exploitables pour l\'ensemble des services.' FROM indicateurs WHERE code = 'PROC-09A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
 
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'Aucune cartographie des modes d\'authentification.' FROM indicateurs WHERE code = 'PROC-09B';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, 'Cartographie informelle/partielle : informations dispersées.' FROM indicateurs WHERE code = 'PROC-09B';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, 'Cartographie formalisée pour une partie des services.' FROM indicateurs WHERE code = 'PROC-09B';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, 'Cartographie applicable : informations exploitables pour la majorité des services.' FROM indicateurs WHERE code = 'PROC-09B';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, 'Cartographie stabilisée : informations exploitables pour l\'ensemble des services.' FROM indicateurs WHERE code = 'PROC-09B';
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'Aucune cartographie des modes d\'authentification.' FROM indicateurs WHERE code = 'PROC-09B'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, 'Cartographie informelle/partielle : informations dispersées.' FROM indicateurs WHERE code = 'PROC-09B'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, 'Cartographie formalisée pour une partie des services.' FROM indicateurs WHERE code = 'PROC-09B'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, 'Cartographie applicable : informations exploitables pour la majorité des services.' FROM indicateurs WHERE code = 'PROC-09B'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, 'Cartographie stabilisée : informations exploitables pour l\'ensemble des services.' FROM indicateurs WHERE code = 'PROC-09B'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
 
 -- Paliers PROC-12A spécifiques (modèle habilitation)
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'Aucun modèle rôles/profils : habilitations gérées au cas par cas.' FROM indicateurs WHERE code = 'PROC-12A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, 'Structuration partielle/informelle : quelques rôles/profils sans référentiel commun.' FROM indicateurs WHERE code = 'PROC-12A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, 'Modèle formalisé : rôles/profils définis et documentés pour une partie des services.' FROM indicateurs WHERE code = 'PROC-12A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, 'Modèle applicable : modalités opérationnelles décrites pour la majorité des services.' FROM indicateurs WHERE code = 'PROC-12A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, 'Modèle stabilisé : référentiel cohérent et homogène utilisable pour l\'ensemble des services.' FROM indicateurs WHERE code = 'PROC-12A';
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'Aucun modèle rôles/profils : habilitations gérées au cas par cas.' FROM indicateurs WHERE code = 'PROC-12A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, 'Structuration partielle/informelle : quelques rôles/profils sans référentiel commun.' FROM indicateurs WHERE code = 'PROC-12A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, 'Modèle formalisé : rôles/profils définis et documentés pour une partie des services.' FROM indicateurs WHERE code = 'PROC-12A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, 'Modèle applicable : modalités opérationnelles décrites pour la majorité des services.' FROM indicateurs WHERE code = 'PROC-12A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, 'Modèle stabilisé : référentiel cohérent et homogène utilisable pour l\'ensemble des services.' FROM indicateurs WHERE code = 'PROC-12A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
 
 -- Paliers PROC-20A spécifiques (connaissance eIDAS)
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'eIDAS et RIE non connus / non pris en compte.' FROM indicateurs WHERE code = 'PROC-20A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, 'eIDAS et RIE peu connus.' FROM indicateurs WHERE code = 'PROC-20A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, 'eIDAS et RIE connus : synthèse disponible, lien eIDAS→RIE expliqué, diffusion au noyau projet.' FROM indicateurs WHERE code = 'PROC-20A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, 'eIDAS et RIE applicable : compréhension partagée permettant de cadrer concrètement la trajectoire.' FROM indicateurs WHERE code = 'PROC-20A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, 'eIDAS et RIE maîtrisé : compris par l\'ensemble des parties prenantes clés, utilisé pour arbitrer les choix.' FROM indicateurs WHERE code = 'PROC-20A';
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'eIDAS et RIE non connus / non pris en compte.' FROM indicateurs WHERE code = 'PROC-20A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, 'eIDAS et RIE peu connus.' FROM indicateurs WHERE code = 'PROC-20A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, 'eIDAS et RIE connus : synthèse disponible, lien eIDAS→RIE expliqué, diffusion au noyau projet.' FROM indicateurs WHERE code = 'PROC-20A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, 'eIDAS et RIE applicable : compréhension partagée permettant de cadrer concrètement la trajectoire.' FROM indicateurs WHERE code = 'PROC-20A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, 'eIDAS et RIE maîtrisé : compris par l\'ensemble des parties prenantes clés, utilisé pour arbitrer les choix.' FROM indicateurs WHERE code = 'PROC-20A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
 
 -- Paliers PROC-07A spécifiques (IAM)
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'Aucune solution IAM.' FROM indicateurs WHERE code = 'PROC-07A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, 'Solution IAM identifiée / à l\'étude : périmètre et cible non cadrés.' FROM indicateurs WHERE code = 'PROC-07A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, 'Solution IAM choisie et cadrée : périmètre défini, rôles et règles de cycle de vie décrits.' FROM indicateurs WHERE code = 'PROC-07A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, 'Solution IAM applicable : modèle d\'identités, workflows nominaux et sources amont définis.' FROM indicateurs WHERE code = 'PROC-07A';
-INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, 'Solution IAM stabilisée : dispositif complet et cohérent sur les cas nominaux et aux limites.' FROM indicateurs WHERE code = 'PROC-07A';
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 0, 'Aucune solution IAM.' FROM indicateurs WHERE code = 'PROC-07A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 1, 'Solution IAM identifiée / à l\'étude : périmètre et cible non cadrés.' FROM indicateurs WHERE code = 'PROC-07A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 2, 'Solution IAM choisie et cadrée : périmètre défini, rôles et règles de cycle de vie décrits.' FROM indicateurs WHERE code = 'PROC-07A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 3, 'Solution IAM applicable : modèle d\'identités, workflows nominaux et sources amont définis.' FROM indicateurs WHERE code = 'PROC-07A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
+INSERT INTO paliers (id_indicateur, valeur, description) SELECT id, 4, 'Solution IAM stabilisée : dispositif complet et cohérent sur les cas nominaux et aux limites.' FROM indicateurs WHERE code = 'PROC-07A'
+  ON DUPLICATE KEY UPDATE description = VALUES(description);
 
 
 -- ============================================================
